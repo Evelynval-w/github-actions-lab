@@ -1,0 +1,45 @@
+name: Update Comment Workflow
+
+on:
+  issues:
+    types: [opened, edited]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to comment on'
+        required: true
+        type: number
+      comment_body:
+        description: 'Comment body text'
+        required: false
+        default: 'This comment was created or updated by the workflow.'
+
+permissions:
+  issues: write
+
+jobs:
+  update-comment:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Find existing comment
+        id: find_comment
+        uses: peter-evans/find-comment@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.inputs.issue_number || github.event.issue.number }}
+          body-includes: '### Automated Status Update'
+
+      - name: Create or update comment
+        uses: peter-evans/create-or-update-comment@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.inputs.issue_number || github.event.issue.number }}
+          comment-id: ${{ steps.find_comment.outputs.comment-id }}
+          body: |
+            ### Automated Status Update
+
+            ${{ github.event.inputs.comment_body || 'Workflow ran successfully!' }}
+
+            > _Last updated: run `${{ github.run_id }}` · triggered by **${{ github.actor }}**_
+          edit-mode: replace
